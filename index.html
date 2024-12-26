@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinMix Prediction System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="flex flex-col min-h-screen bg-[#0A0A0A] text-white">
+    <header id="header" class="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-md border-b border-[#CCFF00]/20">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="text-xl font-bold">
+                winmix<span class="text-[#CCFF00]">.hu</span>
+            </div>
+             <div id="userInfo" class="flex items-center gap-2">
+                <span id="username">Vendég</span>
+                 <button id="loginBtn" class="px-4 py-2 bg-[#CCFF00] text-black font-bold rounded-md hover:bg-[#CCFF00]/90 transition-colors">Bejelentkezés</button>
+                <div id="userProfile" class="hidden flex items-center gap-2">
+                    <span id="loggedInUsername"></span>
+                    <button id="logoutBtn" class="px-4 py-2 bg-[#CCFF00] text-black font-bold rounded-md hover:bg-[#CCFF00]/90 transition-colors">Kijelentkezés</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="timer" class="fixed top-4 right-4 bg-[#CCFF00] text-black px-4 py-2 rounded-md font-bold"></div>
+
+        <main id="mainContent" class="container mx-auto px-4 py-8 flex-grow">
+        <div id="matchSelection">
+            <h2 class="text-2xl font-bold mb-6 text-[#CCFF00]">Mérkőzések kiválasztása</h2>
+            <div class="mb-4 flex gap-4">
+                <input type="text" id="searchMatches" placeholder="Keresés..."
+                       class="w-full p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white">
+                <select id="leagueFilter" class="p-2 bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white">
+                    <option value="">Minden liga</option>
+                    <option value="premier-league">Premier League</option>
+                    <option value="la-liga">La Liga</option>
+                    <option value="bundesliga">Bundesliga</option>
+                </select>
+            </div>
+            <div id="matchGrid" class="grid gap-4 md:grid-cols-2 lg:grid-cols-4"></div>
+            <button id="addMatch"
+                    class="mt-4 px-4 py-2 bg-[#CCFF00] text-black font-bold rounded-md hover:bg-[#CCFF00]/90 transition-colors">
+                + Mérkőzés hozzáadása
+            </button>
+            <button id="runPredictions"
+                    class="w-full mt-6 py-3 bg-[#CCFF00] text-black font-bold rounded-md hover:bg-[#CCFF00]/90 transition-colors disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed run-predictions-btn"
+                    aria-label="Predikciók futtatása">
+                Predikciók futtatása
+            </button>
+        </div>
+        <div id="predictionResults" class="bg-[#141414]/50 backdrop-blur-md border border-[#CCFF00]/20 rounded-2xl p-6 mt-8 hidden">
+            <h2 class="text-2xl font-bold mb-6 text-[#CCFF00]">Predikciók eredménye</h2>
+            <div class="mb-4 flex justify-between items-center">
+                <div>
+                    <label for="sortPredictions" class="mr-2">Rendezés:</label>
+                    <select id="sortPredictions"
+                            class="bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white p-2">
+                        <option value="predictionScore">Predikciós pontszám</option>
+                        <option value="averageGoals">Átlagos gólszám</option>
+                        <option value="btts">Mindkét csapat gólját</option>
+                         <option value="matchName">Mérkőzés neve</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="predictionAlgorithm" class="mr-2">Predikciós algoritmus:</label>
+                    <select id="predictionAlgorithm"
+                            class="bg-[#141414] border border-[#CCFF00]/20 rounded-md text-white p-2">
+                        <option value="default">Alapértelmezett</option>
+                        <option value="attackDefense">Támadó-védő erősségek</option>
+                        <option value="seasonalTrends">Szezonális trendek</option>
+                        <option value="machineLearning">Gépi tanulás</option>
+                    </select>
+                </div>
+            </div>
+            <div id="predictionGrid" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"></div>
+        </div>
+    </main>
+
+    <div id="statisticsSection" class="hidden">
+        <div class="bg-[#141414]/50 backdrop-blur-md border border-[#CCFF00]/20 rounded-2xl p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-[#CCFF00]">Részletes Statisztikák</h2>
+
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Összes predikció</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="totalPredictions">0</p>
+                </div>
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Átlagos gólszám</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="averageGoals">0</p>
+                </div>
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Leggyakoribb eredmény</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="mostCommonResult">N/A</p>
+                </div>
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Átlagos predikciós pontszám</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="avgPredictionScore">0</p>
+                </div>
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Hazai győzelmek aránya</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="homeWinPercentage">0%</p>
+                </div>
+                <div class="bg-[#1A1A1A]/50 p-4 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-2">Mindkét csapat gólját %</h3>
+                    <p class="text-3xl font-bold text-[#CCFF00]" id="bttsPercentage">0%</p>
+                </div>
+            </div>
+
+            <div class="grid gap-8 md:grid-cols-2">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Predikciós pontszámok eloszlása</h3>
+                    <canvas id="predictionScoreDistribution"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Gólok eloszlása</h3>
+                    <canvas id="goalsDistribution"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Forma index trend</h3>
+                    <canvas id="formIndexTrend"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Eredmények megoszlása</h3>
+                    <canvas id="resultDistribution"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">×</span>
+            <h2 class="text-2xl font-bold mb-4 text-[#CCFF00]">Bejelentkezés</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="loginEmail" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="loginEmail" required class="mt-1 p-2 w-full border rounded-md bg-[#141414] text-white border-[#CCFF00]/20 focus:ring focus:ring-[#CCFF00]/50" placeholder="Email címed">
+                </div>
+                <div class="mb-4">
+                    <label for="loginPassword" class="block text-sm font-medium text-gray-700">Jelszó</label>
+                    <input type="password" id="loginPassword" required class="mt-1 p-2 w-full border rounded-md bg-[#141414] text-white border-[#CCFF00]/20 focus:ring focus:ring-[#CCFF00]/50" placeholder="Jelszavad">
+                </div>
+                <button type="submit" class="w-full py-2 bg-[#CCFF00] text-black font-bold rounded-md hover:bg-[#CCFF00]/90 transition-colors">Bejelentkezés</button>
+            </form>
+            <div id="loginError" class="text-red-500 mt-2 hidden"></div>
+        </div>
+    </div>
+
+    <footer class="bg-[#0A0A0A]/80 backdrop-blur-md border-t border-[#CCFF00]/20 py-4">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <nav class="flex justify-around md:justify-start space-x-4 mb-4 md:mb-0">
+                     <a href="#" id="homeLink" class="flex flex-col items-center text-[#CCFF00]" aria-label="Home">
+                        <i class="ri-home-line text-2xl mb-1"></i>
+                        <span class="text-xs">Home</span>
+                    </a>
+                    <a href="#" id="statisticsLink"
+                       class="flex flex-col items-center text-white/70 hover:text-[#CCFF00] transition-colors"
+                       aria-label="Statistics">
+                        <i class="ri-bar-chart-line text-2xl mb-1"></i>
+                        <span class="text-xs">Statistics</span>
+                    </a>
+                     <a href="#" id="favoritedStatisticsLink"
+                       class="flex flex-col items-center text-white/70 hover:text-[#CCFF00] transition-colors"
+                       aria-label="Favorited Statistics">
+                        <i class="ri-star-line text-2xl mb-1"></i>
+                        <span class="text-xs">Favorited Stats</span>
+                    </a>
+                    <a href="#" id="recentLink"
+                       class="flex flex-col items-center text-white/70 hover:text-[#CCFF00] transition-colors"
+                       aria-label="Recent">
+                        <i class="ri-history-line text-2xl mb-1"></i>
+                        <span class="text-xs">Recent</span>
+                    </a>
+                    <a href="#" id="settingsLink"
+                       class="flex flex-col items-center text-white/70 hover:text-[#CCFF00] transition-colors"
+                       aria-label="Settings">
+                        <i class="ri-settings-line text-2xl mb-1"></i>
+                        <span class="text-xs">Settings</span>
+                    </a>
+                </nav>
+                <div id="footerFavorite" class="text-[#CCFF00]">
+                    <span class="text-sm">Nincs kiválasztott kedvenc mérkőzés</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+          <script src="script.js"></script>
+            </body>
+</html>
+
